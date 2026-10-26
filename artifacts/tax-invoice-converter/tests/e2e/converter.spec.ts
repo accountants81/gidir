@@ -1,6 +1,4 @@
 import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import * as XLSX from 'xlsx';
 
@@ -140,6 +138,13 @@ test('requires a sales or purchases choice before a file can be selected', async
   await page.getByTestId('button-select-purchases').click();
   await expect(page.locator('.upload-zone')).toBeVisible();
   await expect(page.locator('input[type="file"]')).toHaveAttribute('accept', /xlsx.*xls/);
+});
+
+test('links to the AAMO website from the top navigation without leaving the converter tab', async ({ page }) => {
+  const link = page.getByRole('link', { name: 'زيارة موقع AAMO' });
+  await expect(link).toHaveAttribute('href', 'https://aamo.vercel.app/');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
 });
 
 test('keeps sales conversion local and downloads an explicitly marked Windows-1256 review draft', async ({ page }) => {
@@ -360,86 +365,58 @@ test('rejects unsupported and damaged files with a visible message', async ({ pa
   await expect(page.getByRole('heading', { name: 'ما نوع المعاملة؟' })).toBeVisible();
 });
 
-test('opens the supplied sales and purchases workbook samples without changing their headers', async ({ page }) => {
+test('opens sales and purchases workbook fixtures without changing their headers', async ({ page }) => {
+  const purchaseRow = validRow(61);
+  purchaseRow[13] = '1';
+  purchaseRow[14] = '3';
   const samples = [
-    { path: resolve(process.cwd(), '../../attached_assets/Sales_ar__2__1792692500962.xlsx'), direction: 'sales' as const },
-    { path: resolve(process.cwd(), '../../attached_assets/Purchases_ar__2__1792692500938.xlsx'), direction: 'purchases' as const },
+    { name: 'sales-fixture.xlsx', direction: 'sales' as const, headers: salesHeaders, row: validRow(60), identityHeader: 'اسم العميل' },
+    { name: 'purchases-fixture.xlsx', direction: 'purchases' as const, headers: purchaseHeaders, row: purchaseRow, identityHeader: 'اسم المورد' },
   ];
-  test.skip(samples.some((sample) => !existsSync(sample.path)), 'User-provided sample workbooks are not present in this checkout.');
   for (const sample of samples) {
     await page.goto('/');
-    const bytes = await readFile(sample.path);
-    await uploadWorkbook(page, sample.direction, basename(sample.path), bytes);
+    await uploadWorkbook(page, sample.direction, sample.name, workbookBuffer(sample.headers, [sample.row]));
     await expect(page.getByRole('heading', { name: 'معاينة وتحقق' })).toBeVisible();
-    await expect(page.locator('.file-names span')).toContainText('0 صف بيانات');
+    await expect(page.locator('.file-names span')).toContainText('1 صف بيانات');
     await expect(page.locator('.table-scroll thead th')).toHaveCount(23);
-    if (sample.direction === 'sales') {
-      await expect(page.locator('.table-scroll thead')).toContainText('مراجعة الإرشادات');
-    } else {
-      await expect(page.locator('.table-scroll thead')).toContainText('اسم المورد');
-    }
+    await expect(page.locator('.table-scroll thead')).toContainText(sample.identityHeader);
+    await expect(page.locator('.table-scroll thead')).toContainText(sample.headers[14]);
   }
 });
 
-test('accepts both new workbooks from either section and preserves the detected template headers', async ({ page }) => {
+test('detects sales and purchases templates from either upload choice and exports the original headers', async ({ page }) => {
+  const purchaseRow = validRow(62);
+  purchaseRow[13] = '1';
+  purchaseRow[14] = '3';
   const samples = [
     {
-      path: resolve(process.cwd(), '../../attached_assets/00_1792956374908.xlsx'),
+      name: 'detected-sales.xlsx',
       direction: 'sales' as const,
+      headers: salesHeaders,
+      row: validRow(62),
       identityHeader: 'اسم العميل',
     },
     {
-      path: resolve(process.cwd(), '../../attached_assets/رقم_المستند_مشتريات_20261025_2213_1792956374932.xlsx'),
+      name: 'detected-purchases.xlsx',
       direction: 'purchases' as const,
+      headers: purchaseHeaders,
+      row: purchaseRow,
       identityHeader: 'اسم المورد',
     },
   ];
-  test.skip(samples.some((sample) => !existsSync(sample.path)), 'The newly supplied workbooks are not present in this checkout.');
-
   for (const sample of samples) {
     for (const selectedDirection of ['sales', 'purchases'] as const) {
       await page.goto('/');
-      const bytes = await readFile(sample.path);
-      const sourceWorkbook = XLSX.read(bytes, { type: 'buffer', cellDates: true, raw: true });
-      const sourceSheet = sourceWorkbook.Sheets[sourceWorkbook.SheetNames[0]];
-      const sourceHeaders = XLSX.utils.sheet_to_json(sourceSheet, { header: 1, range: 'A1:V1', blankrows: false })[0] as string[];
-      const sourceRows = XLSX.utils.sheet_to_json<Array<string | number | Date>>(sourceSheet, {
-        header: 1,
-        raw: true,
-        defval: '',
-        blankrows: false,
-      });
-      const sourceDates = sourceRows.slice(1).map((row) => {
-        const value = row[10];
-        return value instanceof Date
-          ? `${String(value.getUTCDate()).padStart(2, '0')}/${String(value.getUTCMonth() + 1).padStart(2, '0')}/${value.getUTCFullYear()}`
-          : String(value ?? '').trim();
-      }).filter(Boolean);
-
-      await uploadWorkbook(page, selectedDirection, basename(sample.path), bytes);
+      await uploadWorkbook(page, selectedDirection, sample.name, workbookBuffer(sample.headers, [sample.row]));
       await expect(page.getByRole('heading', { name: 'معاينة وتحقق' })).toBeVisible();
       await expect(page.locator('.table-scroll thead th')).toHaveCount(23);
       await expect(page.locator('.table-scroll thead')).toContainText(sample.identityHeader);
 
       const downloadPromise = page.waitForEvent('download');
       await page.getByRole('button', { name: 'إنشاء وتنزيل CSV' }).click();
-      const exportResult = await Promise.race([
-        downloadPromise.then((download) => ({ download })),
-        page.getByRole('alertdialog').waitFor({ state: 'visible' }).then(() => ({ needsConfirmation: true as const })),
-      ]);
-      const download = 'download' in exportResult
-        ? exportResult.download
-        : await (async () => {
-          const confirmedDownload = page.waitForEvent('download');
-          const dialog = await page.getByRole('alertdialog').innerText();
-          const buttonName = dialog.includes('غير مكتمل')
-            ? 'تنزيل مسودة غير جاهزة للرفع'
-            : 'اعتماد القيم الحالية وإنشاء الملف النهائي';
-          await page.getByRole('button', { name: buttonName }).click();
-          return confirmedDownload;
-        })();
+      const download = await downloadPromise;
+      expect(download.suggestedFilename()).toMatch(new RegExp(`^${sample.direction}_final_\\d{8}\\.csv$`));
       const csv = decodeWindows1256(await readFile((await download.path())!));
-      expect(csv.split('\r\n')[0]).toContain(sourceHeaders[14]);
       const outputWorkbook = XLSX.read(csv, { type: 'string', raw: true });
       const outputRows = XLSX.utils.sheet_to_json<Array<string | number | Date>>(outputWorkbook.Sheets[outputWorkbook.SheetNames[0]], {
         header: 1,
@@ -447,32 +424,19 @@ test('accepts both new workbooks from either section and preserves the detected 
         defval: '',
         blankrows: false,
       });
-      expect(outputRows[0]).toEqual(sourceHeaders);
-      const outputDates = outputRows.slice(1).map((row) => String(row[10] ?? '').trim()).filter(Boolean);
-      expect(outputDates).toEqual(sourceDates);
-      const sourceTableGoodsValues = sourceRows.slice(1).map((row) =>
-        String(row[1] ?? '').trim() === '1' && !String(row[2] ?? '').trim()
-          ? '0'
-          : String(row[2] ?? '').trim(),
-      );
-      const outputTableGoodsValues = outputRows.slice(1).map((row) => String(row[2] ?? '').trim());
-      expect(outputTableGoodsValues).toEqual(sourceTableGoodsValues);
-      if (sample.direction === 'sales' && selectedDirection === 'sales') {
-        expect(outputDates.length).toBeGreaterThan(0);
-        expect(outputDates.every((date) => /^\d{2}\/\d{2}\/\d{4}$/.test(date))).toBe(true);
-        expect(outputDates).toContain('25/10/2026');
-      }
-      expect(download.suggestedFilename()).toMatch(new RegExp(`^${sample.direction}_(?:review_incomplete|final_\\d{8})(?:_part_\\d+)?\\.csv$`));
+      expect(outputRows[0]).toEqual(sample.headers);
+      expect(outputRows).toHaveLength(2);
+      expect(String(outputRows[1][3])).toBe(sample.row[3]);
     }
   }
 });
 
-test('preserves accepted sales data while asking about blank product fields', async ({ page }) => {
-  const workbookPath = resolve(process.cwd(), '../../attached_assets/00_1792956374908.xlsx');
-  const acceptedCsvPath = resolve(process.cwd(), '../../attached_assets/00_sales_converted_parts_type3_goods6_legacy_1792990536711.csv');
-  test.skip(!existsSync(workbookPath) || !existsSync(acceptedCsvPath), 'The source workbook and accepted CSV are not both present.');
-
-  await uploadWorkbook(page, 'sales', basename(workbookPath), await readFile(workbookPath));
+test('preserves known sales values in an incomplete draft while required product fields remain blank', async ({ page }) => {
+  const row = validRow(63);
+  row[11] = '';
+  row[13] = '';
+  row[14] = '';
+  await uploadWorkbook(page, 'sales', 'blank-product-fields.xlsx', workbookBuffer(salesHeaders, [row]));
   await expect(page.locator('.missing-values')).toContainText('أسئلة قبل تجهيز الملف النهائي');
   await expect(page.locator('.missing-field').filter({ hasText: 'اسم المنتج' })).toBeVisible();
   await expect(page.locator('.missing-field').filter({ hasText: 'نوع البيان' })).toBeVisible();
@@ -484,35 +448,23 @@ test('preserves accepted sales data while asking about blank product fields', as
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('sales_review_incomplete.csv');
 
-  const actual = await readFile((await download.path())!);
-  const accepted = await readFile(acceptedCsvPath);
-  const actualWorkbook = XLSX.read(decodeWindows1256(actual), { type: 'string', raw: true });
-  const acceptedWorkbook = XLSX.read(decodeWindows1256(accepted), { type: 'string', raw: true });
-  const actualRows = XLSX.utils.sheet_to_json<Array<string | number>>(actualWorkbook.Sheets[actualWorkbook.SheetNames[0]], {
+  const exported = await readFile((await download.path())!);
+  const exportedWorkbook = XLSX.read(decodeWindows1256(exported), { type: 'string', raw: true });
+  const exportedRows = XLSX.utils.sheet_to_json<Array<string | number>>(exportedWorkbook.Sheets[exportedWorkbook.SheetNames[0]], {
     header: 1,
     raw: true,
     defval: '',
     blankrows: false,
   });
-  const acceptedRows = XLSX.utils.sheet_to_json<Array<string | number>>(acceptedWorkbook.Sheets[acceptedWorkbook.SheetNames[0]], {
-    header: 1,
-    raw: true,
-    defval: '',
-    blankrows: false,
-  });
-  expect(actualRows[0]).toEqual(acceptedRows[0]);
-  expect(actualRows).toHaveLength(acceptedRows.length);
-  const preservedColumns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 16, 17, 18, 19, 20, 21];
-  for (let index = 1; index < actualRows.length; index += 1) {
-    expect(preservedColumns.map((column) => String(actualRows[index][column] ?? '')))
-      .toEqual(preservedColumns.map((column) => String(acceptedRows[index][column] ?? '')));
-    expect(actualRows[index][11]).toBe('');
-    expect(actualRows[index][13]).toBe('');
-    expect(actualRows[index][14]).toBe('');
+  expect(exportedRows[0]).toEqual(salesHeaders);
+  expect(exportedRows).toHaveLength(2);
+  const exportedRow = exportedRows[1];
+  for (const column of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 17, 18]) {
+    expect(String(exportedRow[column] ?? '')).toBe(row[column]);
   }
-  expect(acceptedRows.slice(1).every((row) =>
-    row[11] === 'قطع غيار' && String(row[13]) === '3' && String(row[14]) === '6',
-  )).toBe(true);
+  expect(exportedRow[11]).toBe('');
+  expect(exportedRow[13]).toBe('');
+  expect(exportedRow[14]).toBe('');
 });
 
 test('previews only 20 of 100 rows while keeping the table scrollable on a 360px screen', async ({ page }) => {
