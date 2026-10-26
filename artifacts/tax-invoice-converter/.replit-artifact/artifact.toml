@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "محول فواتير الضرائب"
+description = "أداة عربية وإنجليزية لتحويل جداول فواتير الضرائب المصرية من Excel إلى CSV محلياً داخل المتصفح."
+version = "1.0.0"
+id = "artifacts/tax-invoice-converter"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20174
+
+[services.development]
+run = "pnpm --filter @workspace/tax-invoice-converter run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tax-invoice-converter", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tax-invoice-converter/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20174"
+BASE_PATH = "/"
