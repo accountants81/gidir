@@ -8,13 +8,14 @@
 .brand-copy strong { font-size:15px; letter-spacing:-.25px; }
 .brand-copy small { color:#8391a8; font-size:11px; }
 .top-actions { display:flex; align-items:center; gap:9px; }
-.trust-badge,.language-toggle,.install-link { border:1px solid rgba(148,163,184,.16); color:#aab6c8; background:rgba(15,23,42,.48); border-radius:999px; padding:7px 11px; display:inline-flex; align-items:center; gap:6px; font-size:11px; white-space:nowrap; }
+.trust-badge,.language-toggle,.install-link,.website-link { border:1px solid rgba(148,163,184,.16); color:#aab6c8; background:rgba(15,23,42,.48); border-radius:999px; padding:7px 11px; display:inline-flex; align-items:center; gap:6px; font-size:11px; white-space:nowrap; }
 .trust-badge svg { color:#d4af37; }
 .trust-badge.privacy svg { color:#8fbea3; }
-.language-toggle,.install-link,.theme-toggle { color:#e4c85c; transition:background .2s ease,border-color .2s ease,transform .2s ease; }
-.language-toggle,.install-link,.theme-toggle { border:1px solid rgba(148,163,184,.16); background:rgba(15,23,42,.48); border-radius:999px; padding:7px 11px; display:inline-flex; align-items:center; gap:6px; font-size:11px; white-space:nowrap; }
+.language-toggle,.install-link,.website-link,.theme-toggle { color:#e4c85c; transition:background .2s ease,border-color .2s ease,transform .2s ease; }
+.language-toggle,.install-link,.website-link,.theme-toggle { border:1px solid rgba(148,163,184,.16); background:rgba(15,23,42,.48); border-radius:999px; padding:7px 11px; display:inline-flex; align-items:center; gap:6px; font-size:11px; white-space:nowrap; }
+.website-link { text-decoration:none; }
 .theme-toggle { color:#f1d185; border-color:rgba(215,168,79,.38); background:linear-gradient(135deg,rgba(215,168,79,.17),rgba(215,168,79,.07)); }
-.language-toggle:hover,.install-link:hover,.theme-toggle:hover { background:rgba(212,175,55,.12); border-color:rgba(212,175,55,.45); transform:translateY(-1px); }
+.language-toggle:hover,.install-link:hover,.website-link:hover,.theme-toggle:hover { background:rgba(212,175,55,.12); border-color:rgba(212,175,55,.45); transform:translateY(-1px); }
 .hero { min-height:325px; position:relative; display:flex; flex-direction:column; justify-content:center; padding:53px 0 25px; overflow:hidden; }
 .hero-content { position:relative; z-index:1; max-width:730px; }
 .compatibility { display:inline-flex; align-items:center; gap:8px; border:1px solid rgba(212,175,55,.25); background:rgba(212,175,55,.055); color:#d7bf68; border-radius:999px; font-size:11px; padding:6px 12px; letter-spacing:.1px; }
@@ -171,7 +172,7 @@ thead .row-number { z-index:3; }
  .brand-copy small { font-size:9px; }
  .top-actions { gap:5px; }
  .trust-badge { display:none; }
-  .language-toggle,.install-link,.theme-toggle { padding:7px 8px; font-size:9px; gap:4px; }
+  .language-toggle,.install-link,.website-link,.theme-toggle { padding:7px 8px; font-size:9px; gap:4px; }
   .theme-toggle svg { width:14px; height:14px; }
  .hero { padding:38px 0 39px; min-height:296px; }
  .hero h1 { font-size:clamp(31px,8.5vw,43px); line-height:1.35; letter-spacing:-1px; }
@@ -229,7 +230,7 @@ thead .row-number { z-index:3; }
 @media(max-width:360px) {
  .app-shell { width:calc(100% - 22px); }
  .brand-copy strong { font-size:11px; }
-  .language-toggle,.install-link,.theme-toggle { font-size:8px; padding:6px 6px; gap:3px; }
+  .language-toggle,.install-link,.website-link,.theme-toggle { font-size:8px; padding:6px 6px; gap:3px; }
  .hero h1 { font-size:30px; }
  .step-line { width:13px; margin:0 4px; }
  .step-label { font-size:8px; }
@@ -255,7 +256,8 @@ thead .row-number { z-index:3; }
 :root[data-theme='light'] .filename-control { color:var(--muted); }
 :root[data-theme='light'] .trust-badge,
 :root[data-theme='light'] .language-toggle,
-:root[data-theme='light'] .install-link { color:#536176; border-color:var(--line); background:rgba(255,255,255,.65); }
+:root[data-theme='light'] .install-link,
+:root[data-theme='light'] .website-link { color:#536176; border-color:var(--line); background:rgba(255,255,255,.65); }
 :root[data-theme='light'] .theme-toggle { color:#724f0c; border-color:rgba(155,107,18,.35); background:linear-gradient(135deg,rgba(215,168,79,.22),rgba(215,168,79,.1)); }
 :root[data-theme='light'] .trust-badge svg,
 :root[data-theme='light'] .footer-badges svg { color:#9b6b12; }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownToLine, ArrowLeft, ArrowRight, Check, CheckCircle2, FileSpreadsheet, FolderOpen, Languages, LockKeyhole, Moon, RotateCcw, ShieldCheck, Sun, WifiOff, X, AlertTriangle } from 'lucide-react';
+import { ArrowDownToLine, ArrowLeft, ArrowRight, Check, CheckCircle2, ExternalLink, FileSpreadsheet, FolderOpen, Languages, LockKeyhole, Moon, RotateCcw, ShieldCheck, Sun, WifiOff, X, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Stepper } from '@/components/Stepper';
 import { WorkbookPreview } from '@/components/WorkbookPreview';
@@ -286,6 +286,7 @@ function App() {
         <span className="trust-badge"><WifiOff size={13} />{t('يعمل دون اتصال', 'Offline ready')}</span>
         <span className="trust-badge privacy"><LockKeyhole size={13} />{t('خصوصيتك محفوظة', 'Private by design')}</span>
         {(installEvent || iosInstall) && <button className="install-link" onClick={install}>{t('تثبيت التطبيق', 'Install app')}</button>}
+        <a className="website-link" href="https://aamo.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label={t('زيارة موقع AAMO', 'Visit the AAMO website')}><ExternalLink size={14} aria-hidden="true" /><span>AAMO</span></a>
         <button className="theme-toggle" type="button" onClick={() => setTheme((value) => value === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? t('التبديل إلى وضع النهار', 'Switch to light mode') : t('التبديل إلى وضع الليل', 'Switch to dark mode')} aria-pressed={theme === 'light'} data-testid="button-toggle-theme">
           {theme === 'dark' ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
           <span>{theme === 'dark' ? t('نهار', 'Light') : t('ليل', 'Dark')}</span>
